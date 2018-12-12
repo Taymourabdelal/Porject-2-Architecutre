@@ -28,6 +28,7 @@
 		D192B39A21B43D2F007EAB5A /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		D192B3A121B43E11007EAB5A /* PROGRAM */ = {isa = PBXFileReference; lastKnownFileType = text; path = PROGRAM; sourceTree = "<group>"; };
 		D192B3A221B46453007EAB5A /* PARSETRIAL.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PARSETRIAL.cpp; sourceTree = "<group>"; };
+		D1FD68F821B99ACB00649588 /* RS the number and what they need  */ = {isa = PBXFileReference; lastKnownFileType = text; path = "RS the number and what they need "; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -45,7 +46,6 @@
 			isa = PBXGroup;
 			children = (
 				D192B39921B43D2F007EAB5A /* Project_2_ARCHI */,
-				D192B39821B43D2F007EAB5A /* Products */,
 			);
 			sourceTree = "<group>";
 		};
@@ -55,6 +55,7 @@
 				D192B39721B43D2F007EAB5A /* Project_2_ARCHI */,
 			);
 			name = Products;
+			path = ..;
 			sourceTree = "<group>";
 		};
 		D192B39921B43D2F007EAB5A /* Project_2_ARCHI */ = {
@@ -62,7 +63,9 @@
 			children = (
 				D192B39A21B43D2F007EAB5A /* main.cpp */,
 				D192B3A121B43E11007EAB5A /* PROGRAM */,
+				D192B39821B43D2F007EAB5A /* Products */,
 				D192B3A221B46453007EAB5A /* PARSETRIAL.cpp */,
+				D1FD68F821B99ACB00649588 /* RS the number and what they need  */,
 			);
 			path = Project_2_ARCHI;
 			sourceTree = "<group>";
