@@ -34,7 +34,13 @@ int wrongpredictions = 0;
 int Issue_count=0;
 int queueindex;
 int branchtarget = 0;
-vector <inst> instvec;
+int prebranch = 0;
+////added these
+int instructionsexectued;
+int state = 0;
+int branchact;
+bool branchpredict = true;
+//vector <inst> instvec;
 
 
 struct ROB_Cell{
@@ -74,6 +80,58 @@ struct IFT{
     
 };
 
+
+bool predictiomethod2bit ( bool branchact)
+{
+
+    switch (state)
+    {
+        case 0:
+        {
+            if(branchpredict!= branchact)
+                state = 0;
+            else state = 1;
+            
+            return false;
+            break;
+            
+        }
+            
+        case 1:
+        {
+            if(branchpredict!= branchact)
+                state = 0;
+            else state = 2;
+            return false;
+            break;
+        }
+            
+            
+        case  2:
+        {
+            if(branchpredict!= branchact)
+                state = 1;
+            else state = 3;
+            return true;
+            break;
+        }
+            
+            
+        case 3:{
+            
+            if(branchpredict!= branchact)
+                state = 2;
+            else state = 3;
+            
+            return true;
+            break;
+        }
+        default:
+            return false;
+            
+    }
+}
+
 struct ReserveStation{
     
     
@@ -108,7 +166,7 @@ int stat_predict(int imm)
     else return 0;
 }
 
-void commit(int clock, IFT info_Table[],  unordered_map<int, string> &mem, queue<string > &IQ,  bool branchpredict, bool branchact,  int &head, int rf[8], int& tail, int  RAT[])
+void commit(int clock, IFT info_Table[],  unordered_map<int, string> &mem, queue<string > &IQ, int &head, int rf[8], int& tail, int  RAT[])
 
 {
     
@@ -120,8 +178,11 @@ void commit(int clock, IFT info_Table[],  unordered_map<int, string> &mem, queue
         if (ROB[head].ready == true )
             
         {
+            
             cout<<endl<<" ANA DA%LT EL COMMIT"<<endl;
+            
             commit_count+=1;
+            instructionsexectued+=1;
             cout << " rob head value in commit "<< ROB[head].value << endl;
            
 
@@ -129,10 +190,12 @@ void commit(int clock, IFT info_Table[],  unordered_map<int, string> &mem, queue
             if(ROB[head].type=="BEQ")
                 
             {
+            
+                
                 
                 if (branchpredict!=branchact) {
-                    
-                    head=tail=0;  // reretrieveing the data from the memory should be done in the execution stage // do we really need the commit station data type talama we are checking mn el rob ?
+                     head=tail=0;
+                     // reretrieveing the data from the memory should be done in the execution stage // do we really need the commit station data type talama we are checking mn el rob ?
                     wrongpredictions++;
                     ROB[head].Flag_Empty = 1;
                     for ( int i=0; i<4 && (IQ.size()!=0); i++)
@@ -145,6 +208,7 @@ void commit(int clock, IFT info_Table[],  unordered_map<int, string> &mem, queue
                     for ( int i=0 ;i<8 ;i++)
                         
                         RAT[i]=-1;
+                    
     
                 }
    
@@ -156,8 +220,7 @@ void commit(int clock, IFT info_Table[],  unordered_map<int, string> &mem, queue
             else if (ROB[head].type=="LW")
                 mem[ROB[head].destination]=ROB[head].value;
             
-            else{
-                
+            else
                 rf[ROB[head].destination]=ROB[head].value;
             
             cout << " THIS IS DESTINATION" << rf[ROB[head].destination] <<" THIS IS VALUE" << ROB[head].value << endl;
@@ -181,7 +244,7 @@ void commit(int clock, IFT info_Table[],  unordered_map<int, string> &mem, queue
 
     
             
-        }
+        
         
     }
     
@@ -672,18 +735,35 @@ void parsinginstruction ( string instruction , string& type , string& rs1 , stri
                 if (RS[i].Op == "BEQ") // done
                 {
                     
-                    if ( Reg_File[RS[i].Vj]  == Reg_File[ROB[ RS[i].Dest ].destination])
+                  
+                    
+                    if (branchpredict)
                     {
                         
-                       RS[i].Result = PC + 1 + RS[i].Vk ;
-                       branchtarget = PC + 1 + RS[i].Vk ;
+                          branchtarget = PC +1+ RS[i].Vk ;
                         
-                        info_table[ROB[RS[i].Dest].info_table_num].Excueted=clk;
                         
                         branch = true;
+                        prebranch =  PC;
+                    }
+                    cout << " THE CLAUE IN B RS" << Reg_File[RS[i].Vj] << endl << Reg_File[RS[i].Dest] << endl;
+                    if ( Reg_File[RS[i].Vj] == Reg_File[RS[i].Dest])
+                    {
+                        
+                        RS[i].Result = 1;
+                        branchact =1;
+                        
+                        info_table[ROB[RS[i].Dest].info_table_num].Excueted=clk;
+                        RS[i].Vj = -1;
+                        RS[i].Vk = -1;
+                        
                         
                     }
-                    else branch = false;
+                    else { RS[i].Result = 0;
+                        RS[i].Vj = -1;
+                        RS[i].Vk = -1;
+                        branchact = 0;
+                    }
                 }
             else
                 if (RS[i].Op == "JALR") // done
@@ -691,19 +771,24 @@ void parsinginstruction ( string instruction , string& type , string& rs1 , stri
                   //  cout<<"this it the value inside the rob "<<ROB[ RS[i].Dest ].destination;
                    Reg_File[ ROB[ RS[i].Dest ].destination ] = PC + 1;
                     
-                    RS[i].Result = Reg_File[RS[i].Vj];
+                    RS[i].Result =PC+1;
+                    
                     info_table[ROB[RS[i].Dest].info_table_num].Excueted=clk;
+                    branchtarget = Reg_File[RS[i].Vj];
                     RS[i].Vj = -1;
                     RS[i].Vk = -1;
+                     branch = true;
                     
                 }
             else
                 if (RS[i].Op == "RET") // done
                 {
                     RS[i].Result = Reg_File[ ROB[ RS[i].Dest ].destination ];
+                      branchtarget = Reg_File[ ROB[ RS[i].Dest ].destination ] ;
                     info_table[ROB[RS[i].Dest].info_table_num].Excueted=clk;
                     RS[i].Vj = -1;
                     RS[i].Vk = -1;
+                       branch = true;
                 }
             else
                 if (RS[i].Op == "ADD") // done
@@ -769,6 +854,7 @@ void parsinginstruction ( string instruction , string& type , string& rs1 , stri
                     {
                         if ( RS[i].latency==1)
                         {
+                            
                         RS[i].Result = Reg_File[ RS[i].Vj ] +  RS[i].Vk ;
                             cout << "THIS IS ADDI" <<RS[i].Result;
                             info_table[ROB[RS[i].Dest].info_table_num].Excueted=clk;
@@ -914,6 +1000,7 @@ bool Issue( ROB_Cell ROB[] ,IFT info_Table[] , string Inst_Type, ReserveStation 
   
     
     RS_Dest = ROB_NUMBER;
+    
    
     RAT_CHECK(RAT, Vj,  Vk,  Type,  Qj,  Qk);
     
@@ -1171,6 +1258,7 @@ bool Issue( ROB_Cell ROB[] ,IFT info_Table[] , string Inst_Type, ReserveStation 
         
         if ((RS[7].Busy == 0)&& ( ROB_Flag == 1))
         {
+            
             ROB[ROB_NUMBER].num = ROB_NUMBER ;
             
             ROB_tail=ROB_NUMBER;
@@ -2135,15 +2223,16 @@ bool Issue( ROB_Cell ROB[] ,IFT info_Table[] , string Inst_Type, ReserveStation 
     
    
 
-     while (commit_count<instruction_number)
+     while (commit_count < instruction_number)
      {
         // cout <<instruction_number;
-         
+  
+         int insthold;
          if (branch){
              
-             queueindex = 3;
+             queueindex = branchtarget;
              
-             for(int i = 0;i < instqueue.size();i++)
+             for(int i = 0;!instqueue.empty();i++)
              {
                  string x;
                  instqueue.pop();
@@ -2151,9 +2240,22 @@ bool Issue( ROB_Cell ROB[] ,IFT info_Table[] , string Inst_Type, ReserveStation 
              
              branch =false;
              commit_count = 0;
-             instruction_number -= queueindex;
+             int insthold =  1 + instruction_number - queueindex;
+             while ( instqueue.size()<4 && queueindex-1<=instruction_number-1 && instkeeper[queueindex-1]!="") //what if i have more than 4 inst ater branch
+             {
+                 
+                 instqueue.push(instkeeper[queueindex-1]);
+                 cout << " this is te queue index " << queueindex <<endl;
+                 cout << " this is the instruction_number " << instruction_number << endl;
+                 cout << " This is the pushed instruction" << instkeeper[queueindex-1] << endl;
+                 
+                 queueindex++;
+                 
+             }
+            
              Issue_count = 0;
-             
+            instruction_number =  insthold;
+           
              
          }
       
@@ -2195,6 +2297,7 @@ bool Issue( ROB_Cell ROB[] ,IFT info_Table[] , string Inst_Type, ReserveStation 
             R_S_2 = stoi(RS2);
 
         if (RD == "")
+            
              R_S_3 = -123232;
         else
             R_S_3 = stoi(RD);
@@ -2202,22 +2305,27 @@ bool Issue( ROB_Cell ROB[] ,IFT info_Table[] , string Inst_Type, ReserveStation 
 
        if ( Issue(ROB,Info_Table, INSTRUCTION_TYPE, RS , R_S_3, 0, 0, INSTRUCTION_TYPE, R_S_1, R_S_2, 0, clk))
            instqueue.pop();
+           
          }
 
 
 
-        EX (clk,Info_Table,RS, instkeeper, queueindex); // changed instruction number to queue index
+        EX (clk,Info_Table,RS, instkeeper, Issue_count); // changed instruction number to queue index then to issue count
 
          cout << " the OP " <<RS[9].Op;
          cout <<" the OP " << RS[13].Op;
          cout << " the OP " <<RS[10].Op;
          cout << " the OP " <<RS[11].Op;
+         
+   
 
         writeback(clk, Info_Table, RS);
 
       //  cout << " the result of subtraction " << RS[9].Result;
 
-        commit(clk, Info_Table,  instkeeper, instqueue,  0, 0,  ROB_head, Reg_File, ROB_tail, RAT);
+        commit(clk, Info_Table,  instkeeper, instqueue,  ROB_head, Reg_File, ROB_tail, RAT);
+         
+              //   predictiomethod2bit(branchact);
 
          i++;
          clk++;
@@ -2235,8 +2343,12 @@ bool Issue( ROB_Cell ROB[] ,IFT info_Table[] , string Inst_Type, ReserveStation 
         cout<<endl<<"this is the reg "<<endl<< Reg_File[i];
     }
 
-
+    cout << " Miss predictions" << wrongpredictions <<endl;
+    cout << " Total Cycles " <<clk << endl;
+    cout << "Total Instrctions Executed "<< instructionsexectued;
+    
         instfile.close();
                     return 0;
         
     }
+
